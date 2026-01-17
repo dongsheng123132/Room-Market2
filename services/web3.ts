@@ -4,40 +4,57 @@ import { MONAD_TESTNET_CHAIN_ID, MONAD_TESTNET_RPC } from '../constants';
 // Check if address is a demo address
 export const isDemoAddress = (addr: string) => addr.toLowerCase().includes("demo");
 
-// Basic Web3 wrapper
 export const connectWallet = async (): Promise<string | null> => {
-  if (typeof window === 'undefined' || !(window as any).ethereum) {
-    alert("请安装 Rabby 或 MetaMask 钱包以体验完整功能！\n(暂以演示模式继续)");
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const eth = (window as any).ethereum;
+
+  if (!eth) {
+    alert("请先安装 MetaMask 或 Rabby 钱包，然后刷新页面重新连接。\n当前将使用演示模式继续体验。");
     return "0x71C...Demo";
   }
 
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
-  
   try {
-    const accounts = await provider.send("eth_requestAccounts", []);
-    
-    // Enforce Monad Testnet
-    try {
-        await provider.send("wallet_switchEthereumChain", [{ chainId: "0x" + MONAD_TESTNET_CHAIN_ID.toString(16) }]);
-    } catch (switchError: any) {
-        if (switchError.code === 4902) {
-            await provider.send("wallet_addEthereumChain", [{
-                chainId: "0x" + MONAD_TESTNET_CHAIN_ID.toString(16),
-                chainName: "Monad Testnet",
-                rpcUrls: [MONAD_TESTNET_RPC],
-                nativeCurrency: {
-                    name: "MON",
-                    symbol: "MON",
-                    decimals: 18
-                },
-                blockExplorerUrls: ["https://testnet.monadexplorer.com"]
-            }]);
-        }
+    const accounts: string[] = await eth.request({ method: "eth_requestAccounts" });
+    if (!accounts || accounts.length === 0) {
+      alert("未获取到账户，请在钱包中解锁后重试。");
+      return null;
     }
-    
-    return accounts[0];
+
+    const account = accounts[0];
+
+    try {
+      await eth.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x" + MONAD_TESTNET_CHAIN_ID.toString(16) }]
+      });
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        await eth.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: "0x" + MONAD_TESTNET_CHAIN_ID.toString(16),
+            chainName: "Monad Testnet",
+            rpcUrls: [MONAD_TESTNET_RPC],
+            nativeCurrency: {
+              name: "MON",
+              symbol: "MON",
+              decimals: 18
+            },
+            blockExplorerUrls: ["https://testnet.monadexplorer.com"]
+          }]
+        });
+      } else {
+        console.error("Switch chain failed", switchError);
+      }
+    }
+
+    return account;
   } catch (error) {
     console.error("Connection failed", error);
+    alert("连接钱包失败，请确认已在浏览器中解锁钱包并允许站点访问。");
     return null;
   }
 };
