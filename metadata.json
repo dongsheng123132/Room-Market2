@@ -1,0 +1,5 @@
+{
+  "name": "Room-Market (LiveOracle)",
+  "description": "A real-time, high-frequency prediction market and clicker arena built for the Monad blockchain. Features instant settlement and AI-powered market generation.",
+  "requestFramePermissions": []
+}
