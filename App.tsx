@@ -86,6 +86,14 @@ function App() {
     if (addr) setAccount(addr);
   };
 
+  const handleDisconnect = () => {
+    setAccount(null);
+    setActiveMarketId(null);
+    setPlayers([]);
+    setHistory([]);
+    setView('HOME');
+  };
+
   // Create Market
   const handleCreateMarket = (market: Market) => {
     setMarkets(prev => [market, ...prev]); 
@@ -210,10 +218,14 @@ function App() {
              )}
 
             {account ? (
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full border border-slate-700 font-mono text-sm">
+              <button
+                onClick={handleDisconnect}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-full border border-slate-700 font-mono text-sm hover:bg-slate-700 transition-colors"
+                title="点击断开当前钱包连接"
+              >
                 <div className={`w-2 h-2 rounded-full animate-pulse ${account.includes('Demo') ? 'bg-yellow-500' : 'bg-green-500'}`} />
                 {shortenAddress(account)}
-              </div>
+              </button>
             ) : (
               <button
                 onClick={handleConnect}
