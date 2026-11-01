@@ -4,6 +4,21 @@ import { MONAD_TESTNET_CHAIN_ID, MONAD_TESTNET_RPC } from '../constants';
 // Check if address is a demo address
 export const isDemoAddress = (addr: string) => addr.toLowerCase().includes("demo");
 
+const ROOM_MARKET_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: 部署后替换为真实合约地址
+
+const ROOM_MARKET_ABI = [
+  {
+    inputs: [
+      { internalType: "string", name: "marketTitle", type: "string" },
+      { internalType: "uint256", name: "option", type: "uint256" }
+    ],
+    name: "placeBet",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function"
+  }
+] as const;
+
 export const connectWallet = async (): Promise<string | null> => {
   if (typeof window === 'undefined') {
     return null;
@@ -56,6 +71,43 @@ export const connectWallet = async (): Promise<string | null> => {
     console.error("Connection failed", error);
     alert("连接钱包失败，请确认已在浏览器中解锁钱包并允许站点访问。");
     return null;
+  }
+};
+
+export const placeBetOnchain = async (
+  marketTitle: string,
+  option: number,
+  amount: number
+): Promise<boolean | null> => {
+  if (typeof window === 'undefined' || !(window as any).ethereum) return null;
+
+  // 如果还没配置合约地址，则返回 null，交给调用方决定是否降级为直接转账
+  if (
+    !ROOM_MARKET_ADDRESS ||
+    ROOM_MARKET_ADDRESS === "0x0000000000000000000000000000000000000000"
+  ) {
+    console.warn("RoomMarket 合约地址未配置，跳过合约调用");
+    return null;
+  }
+
+  try {
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const signer = await provider.getSigner();
+    const contract = new ethers.Contract(
+      ROOM_MARKET_ADDRESS,
+      ROOM_MARKET_ABI,
+      signer
+    );
+
+    const tx = await contract.placeBet(marketTitle, option, {
+      value: ethers.parseEther(amount.toString())
+    });
+
+    console.log("placeBet tx:", tx.hash);
+    return true;
+  } catch (error) {
+    console.error("placeBet onchain failed", error);
+    return false;
   }
 };
 

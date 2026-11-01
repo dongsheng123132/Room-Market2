@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Market } from '../types';
-import { sendTransaction, isDemoAddress } from '../services/web3';
+import { sendTransaction, isDemoAddress, placeBetOnchain } from '../services/web3';
 import { MOCK_DELAY_MS } from '../constants';
 import { TrendingUp, CheckCircle, Wallet, Loader2 } from 'lucide-react';
 
@@ -27,13 +27,25 @@ const Prediction: React.FC<PredictionProps> = ({ market, onBet, optionsPools }) 
     const currentAccount = accounts?.[0] || "Demo";
 
     if (!isDemoAddress(currentAccount)) {
-        // Real Transaction
-        const txSuccess = await sendTransaction(market.creator, amount);
-        if (!txSuccess) {
+        // 优先尝试走 RoomMarket 合约
+        const onchainResult = await placeBetOnchain(market.title, selectedOption, amount);
+
+        if (onchainResult === false) {
             setLoading(false);
             setStatus('交易取消或失败');
             return;
         }
+
+        if (onchainResult === null) {
+            // 如果合约地址还没配置，降级为直接给房主转账（与之前行为一致）
+            const txSuccess = await sendTransaction(market.creator, amount);
+            if (!txSuccess) {
+                setLoading(false);
+                setStatus('交易取消或失败');
+                return;
+            }
+        }
+
         setStatus('交易已广播，等待确认...');
     } else {
         // Demo Mode Simulation

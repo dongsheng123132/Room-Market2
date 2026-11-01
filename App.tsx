@@ -80,10 +80,20 @@ function App() {
   // Helpers
   const activeMarket = markets.find(m => m.id === activeMarketId) || null;
 
-  // Connect Wallet
-  const handleConnect = async () => {
-    const addr = await connectWallet();
-    if (addr) setAccount(addr);
+  const handleConnect = () => {
+    const run = async () => {
+      const addr = await connectWallet();
+      if (addr) setAccount(addr);
+    };
+
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame === 'undefined') {
+      void run();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      void run();
+    });
   };
 
   const handleDisconnect = () => {
